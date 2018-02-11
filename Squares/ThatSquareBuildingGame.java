@@ -124,7 +124,45 @@ public class ThatSquareBuildingGame extends JPanel {
 	
 	// Put a new, random piece into the dropping position
 	public void newPiece() {
-		pieceOrigin = new Point(5, 2);
+
+		
+		if(!collidesAt(5,2,rotation)){
+			pieceOrigin = new Point(5,2);
+		}
+		else{
+
+			int newX = ThreadLocalRandom.current().nextInt(2, 21);
+			int newY = ThreadLocalRandom.current().nextInt(2, 21);
+			int tolerance = 100;
+			int attempts = 0;
+			while(collidesAt(newX,newY,rotation) && availableSpace() && attempts<tolerance ){
+				//System.out.println("for sure stuck here");
+				newX = ThreadLocalRandom.current().nextInt(2, 21);
+				newY = ThreadLocalRandom.current().nextInt(2, 21);
+				attempts++;
+			}
+			boolean gameOver = false;
+			if (attempts >= tolerance){
+
+				for (int i = 0; i < 23 ;i++ ) {
+					for (int j = 0; j <23 ; j++ ) {
+
+						if(!collidesAt(i,j,rotation)){
+							pieceOrigin = new Point(i,j);
+						}
+					}
+				}
+				gameOver = true;
+			}
+			if (gameOver == true){
+				System.out.println("game over");
+				System.exit(0);
+			}
+
+
+			pieceOrigin = new Point(newX,newY);
+		}
+
 		rotation = 0;
 		if (nextPieces.isEmpty()) {
 			Collections.addAll(nextPieces, 0, 1, 2, 3, 4, 5, 6);
@@ -132,6 +170,7 @@ public class ThatSquareBuildingGame extends JPanel {
 		}
 		currentPiece = nextPieces.get(0);
 		nextPieces.remove(0);
+
 	}
 	
 	// Collision test for the dropping piece
@@ -191,23 +230,22 @@ public class ThatSquareBuildingGame extends JPanel {
 	}
 
 	//return x and y origin of where piece will be randomly placed
-	private int [] availableSpace(){
-		int [] temp =  {1,2,3};
-		int newX = ThreadLocalRandom.current().nextInt(0, 23);
-		int newY = ThreadLocalRandom.current().nextInt(0, 23);
-		if (!collidesAt(newX, newY, rotation)) {
-			System.out.print("current position: "+pieceOrigin.x+","+pieceOrigin.y+" random position: "+ newX+","+newY+" "+"safe\n");
-		}
-		else{
-			System.out.print("current position: "+pieceOrigin.x+","+pieceOrigin.y+" random position: "+ newX+","+newY+" "+"not safe\n");
-		}
-		return temp;
-	}
+	private boolean availableSpace(){
+		
+		for (int i = 0; i < 23 ;i++ ) {
+			for (int j = 0; j <23 ; j++ ) {
 
-	//
-	public void force(){
+				if(!collidesAt(i,j,rotation)){
+				//	System.out.println("true");
+					return true;
+				}
+			}
+		}
+		System.out.println("LOST");
+		return false;
 
 	}
+
 	
 	// Make the dropping piece part of the well, so it is available for
 	// collision detection.
@@ -215,21 +253,20 @@ public class ThatSquareBuildingGame extends JPanel {
 		for (Point p : Tetraminos[currentPiece][rotation]) {
 			well[pieceOrigin.x + p.x][pieceOrigin.y + p.y] = tetraminoColors[currentPiece];
 		}
-		clearRows();
+		clear();
 		newPiece();
 	}
 	
 
 	public void deleteSquare(int max_i, int max_j, int max_of_s){
+		score += max_of_s;
 		for(int i = max_i; i > max_i - max_of_s; i--)
        		{
            		for(int j = max_j; j > max_j - max_of_s; j--)
             	{
 
                 	well[i][j] = Color.BLACK;
-                //M[i][j] = 0;
             	}  
-        	//System.out.println();
        		}
 	}
 	
@@ -299,11 +336,12 @@ public class ThatSquareBuildingGame extends JPanel {
 
 
 
-	public void clearRows() {
+	public void clear() {
 		
 		int[][] M = new int[24][24];
               
-        //
+        //turn the entire board into a binary array 
+        //Use MaxSubSquare to clear largest block
         for (int j = 0; j< 23 ; j++ ) {
         	for (int i = 0; i < 23 ;i++ ) {
         		if (well[i][j] != Color.GRAY && well[i][j] != Color.BLACK && well[i][j] != Color.WHITE) {
@@ -312,31 +350,12 @@ public class ThatSquareBuildingGame extends JPanel {
         		}
         		else{
         			M[i][j] = 0;
-        		}
-        		
-			        		
+        		}      		
         	}
-        //	System.out.println();
-        	
         }
         
 		MaxSubSquare(M);
-		//Fix scoring System - probably in deleteSquare()
-		/*
-		switch (numClears) {
-		case 1:
-			score += 100;
-			break;
-		case 2:
-			score += 300;
-			break;
-		case 3:
-			score += 500;
-			break;
-		case 4:
-			score += 800;
-			break;
-		}*/
+
 	}
 	
 	// Draw the falling piece
@@ -374,11 +393,12 @@ public class ThatSquareBuildingGame extends JPanel {
 		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		f.setSize(26*23+25, 26*23+25);
 		f.setVisible(true);
-		
 		final ThatSquareBuildingGame game = new ThatSquareBuildingGame();
 		game.init();
 		f.add(game);
 		
+		final double [] last = new double[1];
+		last[0] = System.nanoTime();
 		// Keyboard controls
 		f.addKeyListener(new KeyListener() {
 			public void keyTyped(KeyEvent e) {
@@ -404,6 +424,7 @@ public class ThatSquareBuildingGame extends JPanel {
 				 
 				case KeyEvent.VK_Q:
 					game.fixToWell();
+					last[0] = System.nanoTime();
 					game.score += 1;
 					break;
 				}
@@ -413,17 +434,31 @@ public class ThatSquareBuildingGame extends JPanel {
 			}
 		});
 		
-		// Make the falling piece drop every second
+
+
+
+
 		new Thread() {
 			@Override public void run() {
+				int count = 0;
 				while (true) {
-					try {
-						Thread.sleep(1000);
-
-						//System.out.print(x+" , "+y+"\n");
-						game.availableSpace();
-					} catch ( InterruptedException e ) {}
+					if( ((System.nanoTime() - last[0]) / 1000000000.0) > 5.0 && count < 24 ){
+						game.dropDown();
+						count++;
+						/*game.force();
+						try {
+							Thread.sleep(5000);
+						} catch ( InterruptedException e ) {}*/
+					}
+					else if(count>=24) {
+						game.fixToWell();
+						last[0] = System.nanoTime();
+						count = 0;
+					}
+					
 				}
+				
+				
 			}
 		}.start();
 	}
