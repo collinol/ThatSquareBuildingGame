@@ -23,6 +23,5 @@ Goal: clear pieces by forming a complete 4x4 square or larger
 Don't run out of room
 
 > Note: once you place a piece, a new piece won't spawn unless you try hit an arrow key to move it  
-> Yes, it's buggy. I'll get around to fixing it eventually. Not high on my list of priorities tbh
-
+> Yes, it's buggy. I'll get around to fixing it eventually.
 
